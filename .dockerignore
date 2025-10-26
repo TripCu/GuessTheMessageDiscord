@@ -1,0 +1,10 @@
+.git
+**/.DS_Store
+output/
+rooms/
+*.db
+*.sqlite
+*.log
+*.tmp
+.vscode/
+.idea/
