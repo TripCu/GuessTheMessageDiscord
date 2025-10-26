@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guess the Author</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Guess the Author</h1>
+      <p class="subtitle">Battle friends by guessing who sent each message.</p>
+    </header>
+
+    <section class="room-card" id="room-setup">
+      <h2>Join or Create a Room</h2>
+
+      <form id="join-room-form" class="panel">
+        <h3>Join an Existing Room</h3>
+        <label>
+          Room ID
+          <input type="text" id="join-room-id" required placeholder="e.g. abc123defg">
+        </label>
+        <label>
+          Username
+          <input type="text" id="join-username" required placeholder="Pick a display name">
+        </label>
+        <button type="submit" class="primary-btn">Join Room</button>
+      </form>
+
+      <form id="create-room-form" class="panel">
+        <h3>Create a New Room</h3>
+        <label>
+          Room Name (optional)
+          <input type="text" id="create-room-name" placeholder="Friendly room name">
+        </label>
+        <label>
+          Discord SQLite Export
+          <input type="file" id="create-room-db" accept=".db" required>
+        </label>
+        <label>
+          Username
+          <input type="text" id="create-username" required placeholder="Pick a display name">
+        </label>
+        <button type="submit" class="primary-btn">Create Room</button>
+      </form>
+    </section>
+
+    <section class="scoreboard hidden" id="scoreboard">
+      <div class="score-header">
+        <div class="score-block">
+          <span class="label">Room</span>
+          <span id="room-name-label" class="value">-</span>
+          <span id="room-id-label" class="subvalue">-</span>
+        </div>
+        <div class="score-block">
+          <span class="label">Player</span>
+          <span id="player-name-label" class="value">-</span>
+        </div>
+      </div>
+      <div class="score-values">
+        <div class="score-item">
+          <span class="label">Points</span>
+          <span id="total-points" class="value">0</span>
+        </div>
+        <div class="score-item">
+          <span class="label">Streak</span>
+          <span id="current-streak" class="value">0</span>
+        </div>
+        <div class="score-item">
+          <span class="label">Best</span>
+          <span id="best-streak" class="value">0</span>
+        </div>
+      </div>
+      <div class="leaderboard" id="leaderboard">
+        <h3>Leaderboard</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Points</th>
+              <th>Streak</th>
+              <th>Best</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr><td colspan="4">No players yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="game-card hidden" id="game-card">
+      <div id="message-container">
+        <p id="message-content" class="message">Loading message…</p>
+        <div id="attachments" class="attachments hidden"></div>
+        <div id="embeds" class="embeds hidden"></div>
+        <p id="message-meta" class="meta"></p>
+      </div>
+
+      <div id="choices" class="choices hidden"></div>
+
+      <div class="context-controls">
+        <button id="context-btn" class="context-btn" disabled>Buy Context (-200 pts)</button>
+      </div>
+
+      <div id="context" class="context hidden">
+        <div class="context-section">
+          <h3>Previous</h3>
+          <div id="context-before" class="context-entry"></div>
+        </div>
+        <div class="context-section">
+          <h3>Next</h3>
+          <div id="context-after" class="context-entry"></div>
+        </div>
+      </div>
+
+      <div id="result" class="result hidden"></div>
+
+      <div class="actions">
+        <button id="next-btn" class="secondary-btn">Show Another Message</button>
+      </div>
+    </section>
+  </main>
+
+  <template id="result-template">
+    <div>
+      <strong class="result-title"></strong>
+      <p class="result-body"></p>
+    </div>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
