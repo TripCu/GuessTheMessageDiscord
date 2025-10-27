@@ -1,0 +1,3 @@
+# Build tooling requirements.
+# Apache Maven is downloaded automatically if absent when you run build_and_run.sh.
+apache-maven==3.9.6

@@ -26,6 +26,53 @@ ROOM_NAME=""
 PORT="8080"
 ROOMS_DIR="${SCRIPT_DIR}/rooms"
 WEB_ROOT="${SCRIPT_DIR}/public"
+MAVEN_VERSION="3.9.6"
+MVN_CMD="$(command -v mvn || true)"
+
+ensure_maven() {
+  local maven_base="${SCRIPT_DIR}/.maven"
+  local maven_dir="${maven_base}/apache-maven-${MAVEN_VERSION}"
+  local maven_bin="${maven_dir}/bin/mvn"
+
+  if [[ -x "${maven_bin}" ]]; then
+    MVN_CMD="${maven_bin}"
+    return
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "Error: Maven is not installed and 'curl' is unavailable to download it automatically." >&2
+    exit 1
+  fi
+
+  echo "Maven not found. Downloading Apache Maven ${MAVEN_VERSION}..."
+  mkdir -p "${maven_base}"
+  local archive="${maven_base}/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+  local url="https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+
+  if ! curl -fsSL "${url}" -o "${archive}"; then
+    echo "Error: failed to download Maven from ${url}" >&2
+    exit 1
+  fi
+
+  if ! tar -xzf "${archive}" -C "${maven_base}"; then
+    echo "Error: failed to extract Maven archive." >&2
+    exit 1
+  fi
+
+  rm -f "${archive}"
+  MVN_CMD="${maven_bin}"
+}
+
+if [[ -z "${MVN_CMD}" ]]; then
+  ensure_maven
+else
+  echo "Using system Maven at ${MVN_CMD}"
+fi
+
+if [[ -z "${MVN_CMD}" || ! -x "${MVN_CMD}" ]]; then
+  echo "Error: Maven executable not found even after installation attempt." >&2
+  exit 1
+fi
 
 mkdir -p "${ROOMS_DIR}"
 
@@ -84,7 +131,7 @@ if [[ -n "${DB_PATH}" && ! -f "${DB_PATH}" ]]; then
 fi
 
 echo "Building application with Maven..."
-mvn -B clean package
+"${MVN_CMD}" -B clean package
 
 echo "Build complete."
 echo "Launching GuessTheAuthor on port ${PORT}..."

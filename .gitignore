@@ -1,6 +1,7 @@
 # Build artifacts
 /target/
 /output/
+.maven/
 
 # Local data stores
 /rooms/

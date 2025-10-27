@@ -158,27 +158,6 @@ You can point the server at a different web root (`--web-root`) if you customise
 - Tests: none yet—consider adding JUnit tests around `MessageRepository` and `GameEngine` for regressions.
 - Formatting: keep files ASCII; Maven project encoding is UTF-8.
 
-## Deployment Guide (AWS Example)
-1. **Build & Tag**: `docker build -t <account>.dkr.ecr.<region>.amazonaws.com/jeopardy:latest .`
-2. **Create ECR repo**: `aws ecr create-repository --repository-name jeopardy`
-3. **Push Image**: authenticate (`aws ecr get-login-password | docker login ...`), then `docker push`.
-4. **Provision ECS Fargate Service**:
-   - Cluster + task definition referencing the pushed image.
-   - Container port `8080`, command `sh -c "java $JAVA_OPTS -jar /app/app.jar --port ${SERVER_PORT} ..."`.
-   - Mount an EFS access point to `/app/rooms` for persistent databases.
-5. **Load Balancer**: Application Load Balancer (ALB) with target group pointing to the service, health check `/`.
-6. **TLS & Domain**:
-   - Request an ACM certificate for `game.example.com`.
-   - Create Route 53 A-record (alias) pointing to the ALB.
-7. **Observability & Security**:
-   - Enable CloudWatch Logs for the task.
-   - Set alarms on CPU/memory and 5XX count.
-   - Optionally front with AWS WAF (rate limiting, IP allowlists).
-8. **Secrets & Configuration**:
-   - Store custom JVM flags or room directories as task definition env vars.
-   - Restrict outbound network if running in a VPC with security groups.
-
-Alternative options: deploy to Elastic Beanstalk, set up GitHub Actions → ECR → ECS pipeline, or run on a VM/EC2 with Docker Compose.
 
 ## Security Recommendations
 - Terminate TLS in front of the server (ALB, Nginx, Caddy, etc.).
@@ -195,5 +174,3 @@ Alternative options: deploy to Elastic Beanstalk, set up GitHub Actions → ECR 
 - `Database has no eligible messages` – Verify the SQLite export contains `messages` and `participants` tables with non-bot authors.
 - Questions stop appearing – All messages exhausted for the session. Restart room or upload a new database.
 
-## License
-MIT (replace with your preferred licence before publishing).
