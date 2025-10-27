@@ -122,8 +122,8 @@ public final class RoomManager {
             return null;
         }
         String cleaned = name.replaceAll("[^A-Za-z0-9 _-]", "").trim().replaceAll("\\s+", " ");
-        if (cleaned.length() > 40) {
-            cleaned = cleaned.substring(0, 40).trim();
+        if (cleaned.length() > MAX_ROOM_NAME_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_ROOM_NAME_LENGTH).trim();
         }
         return cleaned.isEmpty() ? null : cleaned;
     }

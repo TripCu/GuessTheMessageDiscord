@@ -41,6 +41,7 @@
     isLocked: false,
     latestScore: { totalPoints: 0, currentStreak: 0, bestStreak: 0 }
   };
+  let leaderboardRefreshInFlight = false;
 
   function init() {
     elements.joinRoomForm.addEventListener('submit', handleJoinRoom);
@@ -48,6 +49,12 @@
     elements.nextBtn.addEventListener('click', fetchRandomMessage);
     elements.contextBtn.addEventListener('click', requestContext);
     disableGameUI();
+
+    setInterval(() => {
+      if (state.roomId) {
+        refreshLeaderboard();
+      }
+    }, 15000);
   }
 
   async function handleJoinRoom(event) {
@@ -230,9 +237,10 @@
   }
 
   async function refreshLeaderboard() {
-    if (!state.roomId) {
+    if (!state.roomId || leaderboardRefreshInFlight) {
       return;
     }
+    leaderboardRefreshInFlight = true;
     try {
       const response = await fetch(`/api/rooms?roomId=${encodeURIComponent(state.roomId)}`);
       if (!response.ok) {
@@ -244,6 +252,8 @@
       renderLeaderboard(data.leaderboard || []);
     } catch (error) {
       console.error('Failed to refresh leaderboard:', error);
+    } finally {
+      leaderboardRefreshInFlight = false;
     }
   }
 
@@ -538,6 +548,7 @@
       const cell = document.createElement('td');
       cell.colSpan = 4;
       cell.textContent = 'No players yet.';
+       cell.dataset.label = 'Info';
       row.appendChild(cell);
       elements.leaderboardBody.appendChild(row);
       return;
@@ -545,15 +556,24 @@
 
     entries.forEach((entry) => {
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${entry.username}</td>
-        <td>${formatPoints(entry.totalPoints)}</td>
-        <td>${entry.currentStreak}</td>
-        <td>${entry.bestStreak}</td>
-      `;
       if (entry.username === state.username) {
         row.classList.add('highlight');
       }
+
+      const cells = [
+        { label: 'Player', value: entry.username },
+        { label: 'Points', value: formatPoints(entry.totalPoints) },
+        { label: 'Streak', value: entry.currentStreak },
+        { label: 'Best', value: entry.bestStreak }
+      ];
+
+      cells.forEach(({ label, value }) => {
+        const cell = document.createElement('td');
+        cell.dataset.label = label;
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+
       elements.leaderboardBody.appendChild(row);
     });
   }
@@ -743,13 +763,13 @@
     if (!value) {
       return '';
     }
-    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 32);
+    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
   }
 
   function sanitizeRoomName(value) {
     if (!value) {
       return '';
     }
-    return value.replace(/[^\w\s\-]/g, '').trim().slice(0, 40);
+    return value.replace(/[^\w\s\-]/g, '').trim().replace(/\s+/g, ' ').slice(0, 40);
   }
 })();

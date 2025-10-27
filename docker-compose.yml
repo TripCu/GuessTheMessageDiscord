@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  jeopardy:
+    build: .
+    container_name: jeopardy
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: "8080"
+      MAX_UPLOAD_SIZE: "26214400"
+      TZ: "UTC"
+    volumes:
+      - jeopardy_rooms:/app/rooms
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && timeout 2s cat <&3 | grep -q 200 || exit 1'"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  jeopardy_rooms:
+    driver: local
