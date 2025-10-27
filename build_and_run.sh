@@ -153,4 +153,48 @@ if [[ -z "${JAR_FILE}" ]]; then
   exit 1
 fi
 
+PIDS_TO_KILL=()
+collect_ports() {
+  if [[ -n "${PORT}" ]]; then
+    mapfile -t port_pids < <(lsof -nti :"${PORT}" 2>/dev/null || true)
+    PIDS_TO_KILL+=("${port_pids[@]}")
+  fi
+  mapfile -t jar_pids < <(pgrep -f "jeopardy-server-.*\\.jar" 2>/dev/null || true)
+  PIDS_TO_KILL+=("${jar_pids[@]}")
+}
+
+stop_existing_instances() {
+  collect_ports
+  local unique_pids=()
+  local seen=()
+  for pid in "${PIDS_TO_KILL[@]}"; do
+    if [[ -n "${pid}" && -z "${seen[$pid]}" ]]; then
+      unique_pids+=("${pid}")
+      seen[$pid]=1
+    fi
+  done
+
+  if [[ ${#unique_pids[@]} -eq 0 ]]; then
+    return
+  fi
+
+  echo "Stopping existing server processes..."
+  kill "${unique_pids[@]}" 2>/dev/null || true
+  sleep 1
+
+  local still_running=()
+  for pid in "${unique_pids[@]}"; do
+    if kill -0 "${pid}" 2>/dev/null; then
+      still_running+=("${pid}")
+    fi
+  done
+
+  if [[ ${#still_running[@]} -gt 0 ]]; then
+    echo "Forcing termination for PIDs: ${still_running[*]}"
+    kill -9 "${still_running[@]}" 2>/dev/null || true
+  fi
+}
+
+stop_existing_instances
+
 java -jar "${JAR_FILE}" "${JAVA_ARGS[@]}"
