@@ -1,0 +1,13 @@
+# Build artifacts
+/target/
+/output/
+
+# Local data stores
+/rooms/
+*.db
+
+# OS/Editor cruft
+.DS_Store
+.idea/
+.vscode/
+*.log
