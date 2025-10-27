@@ -41,7 +41,7 @@ Before you start, install or gather the following:
 ## Project Setup
 1. **Clone or download** the repository.
    ```bash
-   git clone https://github.com/your-org/guess-the-author.git
+   git clone https://github.com/TripCu/GuessTheMessageDiscord.git
    cd guess-the-author
    ```
 2. **Review project layout** (see [Project Structure](#project-structure)).
@@ -54,11 +54,10 @@ Before you start, install or gather the following:
    ```bash
    chmod +x build_and_run.sh
    ```
-2. Launch (replace the DB path as needed):
+2. Launch
    ```bash
-   ./build_and_run.sh --db path/to/discord_messages.db --room-name "Friday Night" --port 8080
+   ./build_and_run.sh
    ```
-   - If you omit `--db`, the server starts with no default room; upload a database from the web UI.
    - The script downloads Maven 3.9.6 into `.maven/` if `mvn` is not on PATH.
    - Kills any running server on the specified port before launching.
 3. Open <http://localhost:8080> and create or join a room via the UI.
@@ -71,9 +70,8 @@ Before you start, install or gather the following:
    ```
 3. Run the helper script:
    ```powershell
-   ./build_and_run.ps1 -DiscordDb "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
+   ./build_and_run.ps1
    ```
-   - Arguments are optional; omit `-DiscordDb` to upload via the UI later.
    - The script verifies Java, auto-installs Maven 3.9.6 in `.maven\`, stops existing server processes, builds, and launches the app.
 4. Visit <http://localhost:8080> in your browser.
 
