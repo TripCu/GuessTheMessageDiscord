@@ -48,12 +48,20 @@ mvn -v
 ```
 
 ## Building & Running Locally
-### Quick Start Script (recommended)
+### Quick Start Script (macOS/Linux)
 ```bash
 chmod +x build_and_run.sh
 ./build_and_run.sh --db path/to/discord_messages.db --room-name "Friday Night" --port 8080
 ```
 Flags are optional; the script auto-detects `.db` files in the project root if you omit `--db`. Once the server launches, visit `http://localhost:8080`.
+If Maven is not already installed, the script downloads Apache Maven `3.9.6` into `.maven/` and uses it automatically.
+
+### Windows Quick Start (PowerShell)
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   # Run once to allow local scripts
+./build_and_run.ps1 -Db "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
+```
+Run the script from a PowerShell terminal opened in the repository root. It validates Java, installs Maven `3.9.6` locally under `.maven\` if needed, stops any existing server on the selected port, builds the shaded JAR, and launches it. All parameters are optional; omit `-Db` to start without a seeded room.
 
 ### Maven Manual Build
 ```bash
@@ -173,4 +181,3 @@ You can point the server at a different web root (`--web-root`) if you customise
 - HTTP 404 on static assets – Check `--web-root` flag and that `public/` exists. The default handler resolves `index.html` for `/`.
 - `Database has no eligible messages` – Verify the SQLite export contains `messages` and `participants` tables with non-bot authors.
 - Questions stop appearing – All messages exhausted for the session. Restart room or upload a new database.
-

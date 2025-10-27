@@ -154,45 +154,48 @@ if [[ -z "${JAR_FILE}" ]]; then
 fi
 
 PIDS_TO_KILL=()
-collect_ports() {
+
+collect_pids() {
+  PIDS_TO_KILL=()
+
   if [[ -n "${PORT}" ]]; then
-    mapfile -t port_pids < <(lsof -nti :"${PORT}" 2>/dev/null || true)
-    PIDS_TO_KILL+=("${port_pids[@]}")
+    while IFS= read -r pid; do
+      [[ -n "${pid}" ]] && PIDS_TO_KILL+=("${pid}")
+    done < <(lsof -nti :"${PORT}" 2>/dev/null || true)
   fi
-  mapfile -t jar_pids < <(pgrep -f "jeopardy-server-.*\\.jar" 2>/dev/null || true)
-  PIDS_TO_KILL+=("${jar_pids[@]}")
+
+  while IFS= read -r pid; do
+    [[ -n "${pid}" ]] && PIDS_TO_KILL+=("${pid}")
+  done < <(pgrep -f "jeopardy-server-.*\.jar" 2>/dev/null || true)
 }
 
 stop_existing_instances() {
-  collect_ports
-  local unique_pids=()
-  local seen=()
-  for pid in "${PIDS_TO_KILL[@]}"; do
-    if [[ -n "${pid}" && -z "${seen[$pid]}" ]]; then
-      unique_pids+=("${pid}")
-      seen[$pid]=1
-    fi
-  done
+  collect_pids
+  if [[ ${#PIDS_TO_KILL[@]} -eq 0 ]]; then
+    return
+  fi
 
-  if [[ ${#unique_pids[@]} -eq 0 ]]; then
+  local pids_to_stop=()
+  while IFS= read -r pid; do
+    [[ -n "${pid}" ]] && pids_to_stop+=("${pid}")
+  done < <(printf '%s\n' "${PIDS_TO_KILL[@]}" | awk '!seen[$0]++')
+
+  if [[ ${#pids_to_stop[@]} -eq 0 ]]; then
     return
   fi
 
   echo "Stopping existing server processes..."
-  kill "${unique_pids[@]}" 2>/dev/null || true
+  for pid in "${pids_to_stop[@]}"; do
+    kill "${pid}" 2>/dev/null || true
+  done
   sleep 1
 
-  local still_running=()
-  for pid in "${unique_pids[@]}"; do
+  for pid in "${pids_to_stop[@]}"; do
     if kill -0 "${pid}" 2>/dev/null; then
-      still_running+=("${pid}")
+      echo "Forcing termination for PID: ${pid}"
+      kill -9 "${pid}" 2>/dev/null || true
     fi
   done
-
-  if [[ ${#still_running[@]} -gt 0 ]]; then
-    echo "Forcing termination for PIDs: ${still_running[*]}"
-    kill -9 "${still_running[@]}" 2>/dev/null || true
-  fi
 }
 
 stop_existing_instances
