@@ -47,6 +47,7 @@ public final class RandomMessageHandler implements HttpHandler {
         PlayerSession session = room.getOrCreatePlayer(username);
 
         try {
+            session.engine().forfeitOutstandingQuestions();
             session.engine().pruneExpiredQuestions();
             Optional<GameEngine.QuestionResponse> response = session.engine().prepareQuestion();
             if (response.isEmpty()) {

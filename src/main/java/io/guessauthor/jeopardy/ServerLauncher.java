@@ -10,11 +10,15 @@ import io.guessauthor.jeopardy.rooms.RoomManager;
 import io.guessauthor.jeopardy.rooms.RoomManager.RoomCreationResult;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -81,7 +85,8 @@ public final class ServerLauncher {
         server.setExecutor(executor);
         server.start();
 
-        System.out.printf(Locale.US, "Server running at http://localhost:%d/%n", config.port);
+        String hostAddress = resolveHostAddress();
+        System.out.printf(Locale.US, "Server running at http://%s:%d/%n", hostAddress, config.port);
     }
 
     private static boolean ensureSqliteDriver() {
@@ -157,6 +162,29 @@ public final class ServerLauncher {
             return (parsed >= 1 && parsed <= 65_535) ? parsed : fallback;
         } catch (NumberFormatException ex) {
             return fallback;
+        }
+    }
+
+    private static String resolveHostAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp() || networkInterface.isLoopback() || networkInterface.isVirtual()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (address instanceof Inet4Address && !address.isLoopbackAddress()) {
+                        return address.getHostAddress();
+                    }
+                }
+            }
+            InetAddress fallback = InetAddress.getLocalHost();
+            return fallback.getHostAddress();
+        } catch (Exception ex) {
+            return "localhost";
         }
     }
 

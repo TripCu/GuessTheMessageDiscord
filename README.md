@@ -1,183 +1,158 @@
+
 # Guess The Author Server
 
-Self-hosted guessing game that turns a Discord chat export into a multiplayer challenge. Players join web rooms, see random historic messages, and compete to identify who sent them while the server tracks streaks, points, and leaderboards. The back end is pure Java 21 (standard `HttpServer`) with a vanilla HTML/CSS/JS front end served from the same process.
+Self-hosted web app that turns a Discord chat export into a competitive guessing game. Players join shared rooms, the server streams random messages, and everyone races to identify the original author while leaderboards track streaks and points.
 
-## Feature Highlights
-- Multiplayer rooms with randomly generated 10-character IDs and optional friendly names.
-- Automatic SQLite ingestion with bot filtering, attachment rendering, and Discord embed support (images, GIFs, videos, rich links).
-- Multiple-choice guessing, anti-repeat message deck, and optional paid context (previous/next messages).
-- Real-time scoring that decays over time, rewards streaks, halves points on incorrect answers, and exposes leaderboards in the UI and API.
-- Room persistence on disk, upload validation (≤25 MB), and responsive layout optimised for phones and desktops.
-- Batteries-included Docker and Maven builds for frictionless local runs, CI, or cloud deployment.
+---
+## Table of Contents
+1. [Features](#features)
+2. [Prerequisites](#prerequisites)
+3. [Project Setup](#project-setup)
+4. [Running the Server](#running-the-server)
+   - [macOS & Linux](#macos--linux)
+   - [Windows](#windows)
+   - [Docker](#docker)
+5. [Gameplay Overview](#gameplay-overview)
+6. [Command-line Flags](#command-line-flags)
+7. [API Reference](#api-reference)
+8. [Project Structure](#project-structure)
+9. [Deployment Guide](#deployment-guide)
+10. [Troubleshooting](#troubleshooting)
+11. [Security Notes](#security-notes)
+12. [License](#license)
 
-## Architecture Overview
-- **Language**: Java 21 with packages rooted at `io.guessauthor.jeopardy`.
-- **Dependencies**: Only `org.xerial:sqlite-jdbc` (managed by Maven).
-- **HTTP stack**: `com.sun.net.httpserver.HttpServer` with custom handlers in `src/main/java/io/guessauthor/jeopardy/http`.
-- **Game engine**: Pure Java state machine (`GameEngine`, `MessageDeck`, `GameStats`) managing scoring, streaks, and context.
-- **Data access**: `MessageRepository` wraps SQLite queries, filters bot authors, loads attachments, embeds, and candidate choices.
-- **Front end**: Static assets in `public/` (responsive HTML/CSS and ES6 JavaScript).
-- **Persistence**: Room databases stored under `rooms/` (created at runtime, overridable via CLI/ENV).
+---
+## Features
+- Multiplayer rooms with 10-character IDs and optional friendly names.
+- Smart SQLite importer that filters bots, renders attachments, and handles Discord embeds.
+- Multiple-choice guessing with anti-repeat decks, streak multipliers, and time-based point decay.
+- Optional paid context reveals adjacent messages; incorrect answers halve your score.
+- Responsive HTML/CSS/JS front end served by a pure Java 21 backend using `HttpServer`.
+- Single-command launch scripts for macOS/Linux (`build_and_run.sh`) and Windows (`build_and_run.ps1`).
 
-## Requirements
-- Java Development Kit 21+
-- Maven 3.9+
-- Git (optional but recommended)
-- SQLite Discord export (`*.db`) for real gameplay
+## Prerequisites
+Before you start, install or gather the following:
+- **Java 21+** (e.g., Temurin or Microsoft OpenJDK). Verify with `java -version`.
+- **Maven 3.9+**. Verify with `mvn -v`. Both helper scripts auto-install Maven 3.9.6 locally if missing.
+- **Git** (optional but recommended) to clone the repository.
+- **Discord SQLite export (`*.db`)** produced via an export tool. This seeds the game with messages.
+- **Docker 24+** (optional) if you plan to containerize.
 
-## Installation
-### macOS
-```bash
-brew install openjdk@21 maven
-```
-Ensure `/usr/local/opt/openjdk@21/bin` (or the Homebrew prefix you use) is on `PATH`.
+## Project Setup
+1. **Clone or download** the repository.
+   ```bash
+   git clone https://github.com/your-org/guess-the-author.git
+   cd guess-the-author
+   ```
+2. **Review project layout** (see [Project Structure](#project-structure)).
+3. **Place your Discord export** (`discord_messages.db`) in the project root or note its path.
+
+## Running the Server
+
+### macOS & Linux
+1. Ensure the script is executable:
+   ```bash
+   chmod +x build_and_run.sh
+   ```
+2. Launch (replace the DB path as needed):
+   ```bash
+   ./build_and_run.sh --db path/to/discord_messages.db --room-name "Friday Night" --port 8080
+   ```
+   - If you omit `--db`, the server starts with no default room; upload a database from the web UI.
+   - The script downloads Maven 3.9.6 into `.maven/` if `mvn` is not on PATH.
+   - Kills any running server on the specified port before launching.
+3. Open <http://localhost:8080> and create or join a room via the UI.
 
 ### Windows
-1. Install [Microsoft OpenJDK 21](https://learn.microsoft.com/java/openjdk/download) or [Adoptium Temurin 21](https://adoptium.net/).
-2. Install Maven via [scoop](https://scoop.sh/) (`scoop install maven`) or download the Apache Maven binary zip and add its `bin` to `PATH`.
+1. Open **PowerShell** *as your user* (not necessarily elevated) in the project directory.
+2. The first time, allow local scripts:
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+   ```
+3. Run the helper script:
+   ```powershell
+   ./build_and_run.ps1 -DiscordDb "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
+   ```
+   - Arguments are optional; omit `-DiscordDb` to upload via the UI later.
+   - The script verifies Java, auto-installs Maven 3.9.6 in `.maven\`, stops existing server processes, builds, and launches the app.
+4. Visit <http://localhost:8080> in your browser.
 
-### Linux
-- Debian/Ubuntu: `sudo apt update && sudo apt install openjdk-21-jdk maven`
-- Fedora: `sudo dnf install java-21-openjdk maven`
-- Arch: `sudo pacman -S jdk21-openjdk maven`
+### Docker
+1. Build the image:
+   ```bash
+   docker build -t guess-the-author .
+   ```
+2. Run the container:
+   ```bash
+   docker run --rm -p 8080:8080 -v $(pwd)/rooms:/app/rooms guess-the-author
+   ```
+   - Environment variables: `SERVER_PORT` (default `8080`), `ROOMS_DIR`, `WEB_ROOT`, `JAVA_OPTS`.
+   - Bind mount `/app/rooms` to persist uploaded databases.
 
-Verify:
-```bash
-java -version
-mvn -v
-```
+## Gameplay Overview
+1. **Create or join** a room via the UI.
+2. The server pulls a random eligible message and presents multiple-choice senders.
+3. **Scoring**:
+   - Base 1,000 points per question.
+   - 25-point decay each second until you answer.
+   - Streak multiplier: +20% per consecutive correct answer.
+   - Buying context costs 200 points and reveals the previous and next messages.
+   - Wrong answers halve your total points and reset the streak.
+4. **Skipping counts as incorrect** — using “Show Another Message” without answering applies the same penalty as a wrong guess.
+5. **Leaderboards** update every 15 seconds and display total points, streak, and best streak.
+6. Attachments and Discord embeds (images, GIFs, video, links) render inline.
 
-## Building & Running Locally
-### Quick Start Script (macOS/Linux)
-```bash
-chmod +x build_and_run.sh
-./build_and_run.sh --db path/to/discord_messages.db --room-name "Friday Night" --port 8080
-```
-Flags are optional; the script auto-detects `.db` files in the project root if you omit `--db`. Once the server launches, visit `http://localhost:8080`.
-If Maven is not already installed, the script downloads Apache Maven `3.9.6` into `.maven/` and uses it automatically.
-
-### Windows Quick Start (PowerShell)
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   # Run once to allow local scripts
-./build_and_run.ps1 -DiscordDb "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
-```
-Run the script from a PowerShell terminal opened in the repository root. It validates Java, installs Maven `3.9.6` locally under `.maven\` if needed, stops any existing server on the selected port, builds the shaded JAR, and launches it. All parameters are optional; omit `-Db` to start without a seeded room.
-
-### Maven Manual Build
-```bash
-mvn -B clean package
-```
-Output: `target/jeopardy-server-1.0.0.jar` (shaded, ready to run anywhere with Java 21).
-
-### Run the Shaded JAR
-```bash
-java -jar target/jeopardy-server-1.0.0.jar \
-  --port 8080 \
-  --rooms-dir ./rooms \
-  --web-root ./public \
-  --db /absolute/path/to/discord_messages.db \
-  --room-name "Default Room"
-```
-All flags are optional; omit `--db` to start without a seeded room.
-
-### Docker Workflow
-```bash
-docker build -t jeopardy-server .
-docker run --rm -p 8080:8080 \
-           -v "$(pwd)/rooms:/app/rooms" \
-           -e SERVER_PORT=8080 \
-           jeopardy-server
-```
-Optional environment variables:
-- `SERVER_PORT` (default `8080`)
-- `ROOMS_DIR` (default `/app/rooms`)
-- `WEB_ROOT` (default `/app/public`)
-- `JAVA_OPTS` (extra JVM flags, e.g. `-Xms256m -Xmx512m`)
-
-### Command-line Options
+## Command-line Flags
 | Flag | Description |
 | ---- | ----------- |
-| `--db PATH` | Seed a room from a Discord SQLite export. |
-| `--room-name NAME` | Friendly name for the seeded room (fallback: `Room <id>`). |
-| `--port PORT` | HTTP port (default `8080`). |
-| `--rooms-dir DIR` | Directory for storing uploaded or seeded room databases. |
-| `--web-root DIR` | Directory containing static assets to serve. |
+| `--db PATH` | Seed a room from a Discord SQLite export |
+| `--room-name NAME` | Friendly name for the seeded room |
+| `--port PORT` | HTTP port (default `8080`) |
+| `--rooms-dir DIR` | Directory to persist room databases |
+| `--web-root DIR` | Static asset directory (default `public/`) |
 
-## Gameplay & Scoring
-1. **Join/Create**: Players enter a room ID or upload a database to create a new room. Room IDs are 10 lowercase alphanumerics.
-2. **Choices**: Messages are presented with multiple-choice options. Bots are filtered out from both questions and options.
-3. **Scoring**:
-   - Base points: 1,000 per question.
-   - Time decay: 25 points per elapsed second.
-   - Streak multiplier: +20 % per consecutive correct answer (1.0, 1.2, 1.4, …).
-   - Incorrect guesses: total points immediately halve; streak resets.
-   - Context purchase: costs 200 points, reveals previous/next messages.
-   - Question expiry: 10 minutes—expired questions need a redraw.
-4. **Attachments & Embeds**: Images, GIFs, and videos render inline; large links display as cards or fall back to anchors.
-5. **Leaderboards**: Aggregate per room, sorted by total points, updating every 15 seconds in the browser.
-
-## Room Storage & Persistence
-- Upload size limit: 25 MB (checked before writing to disk).
-- Stored under the `rooms/` directory (auto-created). Map this directory to persistent storage for long-lived deployments.
-- Room IDs map to `<roomId>.db` SQLite files; the repository loads eligible messages (`content` not blank, `is_bot = 0`).
-- Sanitised usernames and room names prevent injection and keep leaderboard tidy.
+The Windows script uses equivalent parameters: `-DiscordDb`, `-RoomName`, `-Port`.
 
 ## API Reference
-All endpoints live under `/api/*` and accept/return UTF-8 JSON or form data.
+- `POST /api/rooms` – Form-urlencoded body with `dbBase64` (base64 SQLite file) and optional `roomName`. Returns `{ roomId, displayName }`.
+- `GET /api/rooms?roomId=ID` – Returns `{ roomId, displayName, leaderboard: [...] }`.
+- `GET /api/random-message?roomId=ID&username=NAME` – Returns question data (content, attachments, choices, score snapshot).
+- `POST /api/guess` – Form-urlencoded `roomId`, `username`, `questionId`, `choiceId`. Returns scoring results.
+- `POST /api/context` – Form-urlencoded `roomId`, `username`, `questionId`. Deducts points and returns previous/next message context.
 
-### `POST /api/rooms`
-- Body: `application/x-www-form-urlencoded` with `dbBase64` (base64 encoded SQLite file) and optional `roomName`.
-- Response `201`: `{ "roomId": "...", "displayName": "..." }`
-- Errors: `400` (invalid payload or no eligible messages), `413` (file too large), `500` (storage failure).
+## Project Structure
+```
+build_and_run.sh        # macOS/Linux helper script
+build_and_run.ps1       # Windows helper script
+Dockerfile
+pom.xml                 # Maven build definition
+public/                 # Front-end (HTML, CSS, JS)
+src/main/java/io/guessauthor/jeopardy/  # Java backend
+rooms/                  # Created at runtime for uploaded DBs (ignored by git)
+.maven/                 # Auto-downloaded Maven (ignored by git)
+```
 
-### `GET /api/rooms?roomId=xxxx`
-- Returns `{ "roomId": "...", "displayName": "...", "leaderboard": [ { "username": "...", "totalPoints": 0, ... } ] }`
-- Errors: `400` (missing roomId), `404` (unknown room).
-
-### `GET /api/random-message?roomId=xxxx&username=Player`
-- Returns a question payload: `questionId`, message content, attachments, embeds, choices, and current score snapshot.
-- Errors: `400`, `404`, `503` (deck exhausted or DB issue).
-
-### `POST /api/guess`
-- Body: `roomId`, `username`, `questionId`, `choiceId`.
-- Response `200`: includes correctness, awarded points, base points, elapsed time, updated totals, and the correct author info.
-- Errors: `400` (invalid input), `404` (room or question not found).
-
-### `POST /api/context`
-- Body: `roomId`, `username`, `questionId`.
-- Response `200`: deducts points and returns `before`/`after` messages plus updated score.
-- Errors: `400` (insufficient funds), `404` (question expired), `500` (DB error).
-
-## Static Assets & Responsiveness
-- `public/index.html`: room selection, game board, leaderboard (mobile-first layout).
-- `public/app.js`: handles REST calls, scoring UI updates, context retrieval, debounce, and sanitisation helpers.
-- `public/styles.css`: themed styling with CSS Grid/Flexbox, responsive breakpoints, mobile-friendly tables, and accessible contrast.
-You can point the server at a different web root (`--web-root`) if you customise the client or use a separate build pipeline.
-
-## Development Workflow
-- Source tree:
-  ```
-  src/main/java/io/guessauthor/jeopardy/...   core server code
-  public/                                     static front-end assets
-  rooms/                                      runtime data (created on launch)
-  ```
-- Java code style: prefer small, focused classes. HTTP handlers live in `http/`, game logic in top-level package, utilities under `util/`.
-- Build targets: `mvn -B clean package` and `./build_and_run.sh` both produce the same shaded jar.
-- Tests: none yet—consider adding JUnit tests around `MessageRepository` and `GameEngine` for regressions.
-- Formatting: keep files ASCII; Maven project encoding is UTF-8.
-
-
-## Security Recommendations
-- Terminate TLS in front of the server (ALB, Nginx, Caddy, etc.).
-- Keep the `/rooms` directory outside public static assets; never serve uploaded DBs directly.
-- Validate uploaded databases—server already enforces size and basic content checks; consider adding antivirus scanning in production.
-- Run the Docker container as a non-root user if customising the image.
-- Use firewall rules/VPC security groups to limit access to the HTTP port.
-- Rotate databases periodically and review logs for abuse.
+## Deployment Guide
+1. Build the Docker image and push to a registry (ECR/GCR/ Docker Hub).
+2. Run on ECS Fargate, Kubernetes, or another orchestrator behind an HTTPS load balancer.
+3. Mount `/app/rooms` to persistent storage (Amazon EFS, Kubernetes PVC, etc.).
+4. Obtain TLS certificates (ACM, Let’s Encrypt) and enforce HTTPS.
+5. Add monitoring (CloudWatch, Prometheus) and optionally protect endpoints with WAF or IP allowlists.
+6. For CI/CD, set up pipelines to `mvn package`, build/push the Docker image, and deploy.
 
 ## Troubleshooting
-- `mvn: command not found` – Install Maven (see installation section) and reopen your shell.
-- `java.lang.UnsupportedClassVersionError` – Ensure you run with Java 21 (older runtimes cannot execute the shaded jar).
-- HTTP 404 on static assets – Check `--web-root` flag and that `public/` exists. The default handler resolves `index.html` for `/`.
-- `Database has no eligible messages` – Verify the SQLite export contains `messages` and `participants` tables with non-bot authors.
-- Questions stop appearing – All messages exhausted for the session. Restart room or upload a new database.
+- **Maven missing** – Scripts auto-install Maven 3.9.6. Double-check the script output if the download fails.
+- **Jar not found** – Ensure `mvn -B clean package` succeeded; check `target/` contents and Maven logs.
+- **SLF4J warning** – Add `slf4j-simple` or another binding if you need logging output (warning is harmless).
+- **Port already in use** – Scripts attempt to kill existing processes; otherwise, choose a different `--port` / `-Port`.
+- **Database has no eligible messages** – Verify the export includes `messages` and `participants` with non-bot entries.
+
+## Security Notes
+- Serve the app behind HTTPS; terminate TLS at your load balancer or reverse proxy.
+- Restrict access to `/rooms` directory (never expose database files publicly).
+- Validate uploads server-side (size checks already in place; add malware scanning for production).
+- Run the Docker container as a non-root user if you extend the image.
+- Review logs and consider rate limiting, authentication, or WAF for public deployments.
+
+## License
+MIT (replace with your preferred license before publishing).

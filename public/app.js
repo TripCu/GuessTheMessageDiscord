@@ -135,6 +135,10 @@
     if (!ensureReady()) {
       return;
     }
+    state.currentQuestionId = null;
+    state.contextUnlocked = false;
+    state.isLocked = false;
+    updateContextButton();
     showLoadingState();
     try {
       const response = await fetch(`/api/random-message?roomId=${encodeURIComponent(state.roomId)}&username=${encodeURIComponent(state.username)}`);

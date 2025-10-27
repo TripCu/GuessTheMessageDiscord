@@ -182,17 +182,24 @@ public final class MessageRepository {
     private List<Choice> loadDistractorChoices(Connection connection, String authorId, int limit) throws SQLException {
         String sql = """
             SELECT
-                id,
-                COALESCE(NULLIF(TRIM(nickname), ''), NULLIF(TRIM(name), ''), 'Unknown') AS display_name,
+                p.id,
+                COALESCE(NULLIF(TRIM(p.nickname), ''), NULLIF(TRIM(p.name), ''), 'Unknown') AS display_name,
                 CASE
-                    WHEN name IS NOT NULL AND discriminator IS NOT NULL
-                    THEN name || '#' || discriminator
-                    ELSE name
-                END AS full_name
-            FROM participants
-            WHERE id != ?
-              AND (is_bot IS NULL OR is_bot = 0)
-            ORDER BY RANDOM()
+                    WHEN p.name IS NOT NULL AND p.discriminator IS NOT NULL
+                    THEN p.name || '#' || p.discriminator
+                    ELSE p.name
+                END AS full_name,
+                COALESCE(stats.message_count, 0) AS message_count
+            FROM participants p
+            LEFT JOIN (
+                SELECT author_id, COUNT(*) AS message_count
+                FROM messages
+                GROUP BY author_id
+            ) stats ON stats.author_id = p.id
+            WHERE p.id != ?
+              AND (p.is_bot IS NULL OR p.is_bot = 0)
+              AND COALESCE(stats.message_count, 0) > 0
+            ORDER BY COALESCE(stats.message_count, 0) DESC, RANDOM()
             LIMIT ?
         """;
         List<Choice> distractors = new ArrayList<>();

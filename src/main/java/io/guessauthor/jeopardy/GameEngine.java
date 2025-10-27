@@ -86,7 +86,21 @@ public final class GameEngine {
     }
 
     public GuessEvaluationResult evaluateGuess(String questionId, String choiceId) {
-        if (choiceId == null || choiceId.isBlank()) {
+        return resolveGuess(questionId, choiceId, false);
+    }
+
+    public GuessEvaluationResult forfeitQuestion(String questionId) {
+        return resolveGuess(questionId, null, true);
+    }
+
+    public void forfeitOutstandingQuestions() {
+        for (String questionId : activeQuestions.keySet()) {
+            resolveGuess(questionId, null, true);
+        }
+    }
+
+    private GuessEvaluationResult resolveGuess(String questionId, String choiceId, boolean forceIncorrect) {
+        if (!forceIncorrect && (choiceId == null || choiceId.isBlank())) {
             return GuessEvaluationResult.invalid();
         }
 
@@ -97,7 +111,9 @@ public final class GameEngine {
 
         MessageRepository.Message message = state.message();
         String correctChoiceId = message.authorId();
-        boolean correct = correctChoiceId != null && correctChoiceId.equals(choiceId);
+        boolean correct = !forceIncorrect
+            && correctChoiceId != null
+            && correctChoiceId.equals(choiceId);
 
         double elapsedSeconds = Math.max(
             0.0,

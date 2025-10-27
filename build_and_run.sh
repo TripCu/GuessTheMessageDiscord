@@ -103,26 +103,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "${DB_PATH}" ]]; then
-  if [[ -f "${SCRIPT_DIR}/discord_messages.db" ]]; then
-    DB_PATH="${SCRIPT_DIR}/discord_messages.db"
-    echo "Detected Discord DB: ${DB_PATH}"
-  else
-    DB_CANDIDATES=()
-    while IFS= read -r -d '' candidate; do
-      DB_CANDIDATES+=("$candidate")
-    done < <(find "${SCRIPT_DIR}" -maxdepth 1 -type f -name '*.db' -print0 2>/dev/null)
-
-    if [[ ${#DB_CANDIDATES[@]} -eq 1 ]]; then
-      DB_PATH="${DB_CANDIDATES[0]}"
-      echo "Detected Discord DB: ${DB_PATH}"
-    elif [[ ${#DB_CANDIDATES[@]} -gt 1 ]]; then
-      echo "Multiple .db files found. Starting without a default room; use --db to specify one."
-      DB_PATH=""
-    else
-      echo "No Discord database found. You can create rooms via the web UI."
-      DB_PATH=""
-    fi
-  fi
+  echo "No Discord database specified. The server will start without a default room."
+  DB_PATH=""
 fi
 
 if [[ -n "${DB_PATH}" && ! -f "${DB_PATH}" ]]; then
