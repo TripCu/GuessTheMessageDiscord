@@ -148,12 +148,26 @@ $mvnCmd = Ensure-Maven
 Write-Host 'Building application with Maven...'
 & $mvnCmd -B clean package
 
-$jar = Get-ChildItem -Path (Join-Path $ScriptDir 'target') -Filter 'jeopardy-server-*.jar' |
+$targetDir = Join-Path $ScriptDir 'target'
+if (-not (Test-Path $targetDir)) {
+    throw "Maven did not produce a target/ directory. Check the build output for errors."
+}
+
+$jar = Get-ChildItem -Path $targetDir -Filter 'jeopardy-server-*.jar' -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike 'original-*' } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 
 if (-not $jar) {
-    throw "Shaded JAR not found in target/. Did the build succeed?"
+    $jar = Get-ChildItem -Path $targetDir -Filter 'jeopardy-server-*-shaded.jar' -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+}
+
+if (-not $jar) {
+    Write-Host "Shaded JAR not found. Contents of $targetDir:"
+    Get-ChildItem -Path $targetDir
+    throw "Shaded JAR not found in target/. Check Maven output for errors."
 }
 
 Stop-ExistingInstances -PortValue $Port -JarNamePattern $jar.Name
