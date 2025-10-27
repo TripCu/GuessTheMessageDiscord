@@ -165,7 +165,7 @@ if (-not $jar) {
 }
 
 if (-not $jar) {
-    Write-Host "Shaded JAR not found. Contents of $targetDir:"
+    Write-Host "Shaded JAR not found. Contents of ${targetDir}:"
     Get-ChildItem -Path $targetDir
     throw "Shaded JAR not found in target/. Check Maven output for errors."
 }
