@@ -20,7 +20,7 @@ public final class Room {
     private final double basePoints;
     private final double decayPerSecond;
     private final double streakBonusStep;
-    private final long contextCost;
+    private final double contextCostPercentage;
     private final Duration questionExpiry;
     private final ConcurrentHashMap<String, PlayerSession> players = new ConcurrentHashMap<>();
 
@@ -32,7 +32,7 @@ public final class Room {
         double basePoints,
         double decayPerSecond,
         double streakBonusStep,
-        long contextCost,
+        double contextCostPercentage,
         Duration questionExpiry
     ) {
         this.id = id;
@@ -42,7 +42,7 @@ public final class Room {
         this.basePoints = basePoints;
         this.decayPerSecond = decayPerSecond;
         this.streakBonusStep = streakBonusStep;
-        this.contextCost = contextCost;
+        this.contextCostPercentage = contextCostPercentage;
         this.questionExpiry = questionExpiry;
     }
 
@@ -65,7 +65,7 @@ public final class Room {
                 basePoints,
                 decayPerSecond,
                 streakBonusStep,
-                contextCost,
+                contextCostPercentage,
                 questionExpiry
             )
         );

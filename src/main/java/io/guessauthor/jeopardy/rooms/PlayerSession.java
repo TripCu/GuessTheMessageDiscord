@@ -21,7 +21,7 @@ public final class PlayerSession {
         double basePoints,
         double decayPerSecond,
         double streakBonusStep,
-        long contextCost,
+        double contextCostPercentage,
         Duration questionExpiry
     ) {
         this.username = username;
@@ -34,7 +34,7 @@ public final class PlayerSession {
             basePoints,
             decayPerSecond,
             streakBonusStep,
-            contextCost,
+            contextCostPercentage,
             questionExpiry
         );
     }

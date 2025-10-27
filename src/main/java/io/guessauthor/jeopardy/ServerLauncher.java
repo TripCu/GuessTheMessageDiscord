@@ -27,7 +27,7 @@ public final class ServerLauncher {
     private static final double BASE_POINTS = 1_000.0;
     private static final double DECAY_PER_SECOND = 25.0;
     private static final double STREAK_BONUS_STEP = 0.2;
-    private static final long CONTEXT_COST = 200L;
+    private static final double CONTEXT_PERCENTAGE = 0.10;
     private static final Duration QUESTION_EXPIRY = Duration.ofMinutes(10);
 
     private ServerLauncher() {
@@ -55,7 +55,7 @@ public final class ServerLauncher {
             BASE_POINTS,
             DECAY_PER_SECOND,
             STREAK_BONUS_STEP,
-            CONTEXT_COST,
+            CONTEXT_PERCENTAGE,
             QUESTION_EXPIRY
         );
 

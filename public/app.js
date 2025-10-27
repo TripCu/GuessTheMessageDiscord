@@ -1,5 +1,5 @@
 (() => {
-  const CONTEXT_COST = 200;
+  const CONTEXT_PERCENT = 0.1;
 
   const elements = {
     roomSetup: document.getElementById('room-setup'),
@@ -187,6 +187,9 @@
       decorateChoiceButtons(choiceId, data.correctChoiceId);
       renderGuessResult(data, choiceLabel);
       updateScoreboard(data);
+      renderContext(data.context || null);
+      state.contextUnlocked = true;
+      updateContextButton();
       refreshLeaderboard();
       state.currentQuestionId = null;
     } catch (error) {
@@ -200,13 +203,11 @@
     if (!ensureReady() || state.contextUnlocked || state.isLocked || !state.currentQuestionId) {
       return;
     }
-    if (state.latestScore.totalPoints < CONTEXT_COST) {
+    const estimatedCost = estimateContextCost();
+    if (estimatedCost > state.latestScore.totalPoints) {
       return;
     }
 
-    state.latestScore.totalPoints = Math.max(0, state.latestScore.totalPoints - CONTEXT_COST);
-    updateScoreboardDisplay();
-    updateContextButton();
     showContextLoading();
 
     const params = new URLSearchParams({
@@ -234,7 +235,6 @@
     } catch (error) {
       alert(error.message || 'Unable to unlock context.');
       state.contextUnlocked = false;
-      updateScoreboardDisplay();
       clearContext();
       updateContextButton();
     }
@@ -617,15 +617,28 @@
     if (!elements.contextBtn) {
       return;
     }
+    const estimatedCost = estimateContextCost();
     const disabled = !state.roomId
       || !state.currentQuestionId
       || state.contextUnlocked
       || state.isLocked
-      || state.latestScore.totalPoints < CONTEXT_COST;
+      || (estimatedCost > state.latestScore.totalPoints && estimatedCost > 0);
     elements.contextBtn.disabled = disabled;
     elements.contextBtn.textContent = state.contextUnlocked
       ? 'Context unlocked'
-      : `Buy Context (-${formatPoints(CONTEXT_COST)} pts)`;
+      : `Buy Context (-10%${estimatedCost > 0 ? ` ≈ ${formatPoints(estimatedCost)} pts` : ''})`;
+  }
+
+  function estimateContextCost() {
+    const total = Math.max(0, state.latestScore.totalPoints);
+    if (total === 0) {
+      return 0;
+    }
+    const rawCost = Math.ceil(total * CONTEXT_PERCENT);
+    if (rawCost <= 0) {
+      return 1;
+    }
+    return Math.min(rawCost, total);
   }
 
   function enableGameUI() {

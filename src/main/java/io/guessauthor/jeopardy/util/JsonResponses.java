@@ -49,7 +49,11 @@ public final class JsonResponses {
               "elapsedSeconds": %s,
               "totalPoints": %s,
               "currentStreak": %s,
-              "bestStreak": %s
+              "bestStreak": %s,
+              "context": {
+                "before": %s,
+                "after": %s
+              }
             }
             """.formatted(
             Boolean.toString(response.correct()),
@@ -62,7 +66,9 @@ public final class JsonResponses {
             formatDouble(response.elapsedSeconds()),
             Long.toString(response.score().totalPoints()),
             Integer.toString(response.score().currentStreak()),
-            Integer.toString(response.score().bestStreak())
+            Integer.toString(response.score().bestStreak()),
+            contextSnippetToJson(response.context() == null ? null : response.context().before()),
+            contextSnippetToJson(response.context() == null ? null : response.context().after())
         );
     }
 

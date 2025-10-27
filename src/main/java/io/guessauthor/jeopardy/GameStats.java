@@ -31,7 +31,7 @@ public final class GameStats {
     }
 
     public synchronized GameSnapshot spendPoints(long cost) {
-        if (cost <= 0 || totalPoints < cost) {
+        if (cost < 0 || totalPoints < cost) {
             return null;
         }
         totalPoints -= cost;

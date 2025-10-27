@@ -10,6 +10,7 @@ final class QuestionState {
     private final long issuedAtNanos;
     private boolean contextUnlocked;
     private MessageRepository.MessageContext context;
+    private long contextCost;
 
     QuestionState(MessageRepository.Message message, long issuedAtNanos) {
         this.message = message;
@@ -32,8 +33,13 @@ final class QuestionState {
         return Optional.ofNullable(context);
     }
 
-    synchronized void unlockContext(MessageRepository.MessageContext context) {
+    synchronized long contextCost() {
+        return contextCost;
+    }
+
+    synchronized void unlockContext(MessageRepository.MessageContext context, long cost) {
         this.context = context;
         this.contextUnlocked = true;
+        this.contextCost = cost;
     }
 }

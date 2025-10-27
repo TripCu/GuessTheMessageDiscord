@@ -18,7 +18,7 @@ public final class GameEngine {
     private final double basePoints;
     private final double decayPerSecond;
     private final double streakBonusStep;
-    private final long contextCost;
+    private final double contextCostPercentage;
     private final long questionExpiryNanos;
     private final ConcurrentHashMap<String, QuestionState> activeQuestions = new ConcurrentHashMap<>();
 
@@ -29,7 +29,7 @@ public final class GameEngine {
         double basePoints,
         double decayPerSecond,
         double streakBonusStep,
-        long contextCost,
+        double contextCostPercentage,
         Duration questionExpiry
     ) {
         this.repository = repository;
@@ -38,7 +38,7 @@ public final class GameEngine {
         this.basePoints = basePoints;
         this.decayPerSecond = decayPerSecond;
         this.streakBonusStep = streakBonusStep;
-        this.contextCost = contextCost;
+        this.contextCostPercentage = contextCostPercentage;
         this.questionExpiryNanos = questionExpiry.toNanos();
     }
 
@@ -125,6 +125,18 @@ public final class GameEngine {
             ? stats.applyCorrect(effectiveBase, streakBonusStep)
             : stats.applyIncorrect(effectiveBase);
 
+        MessageRepository.MessageContext contextSnapshot = null;
+        if (!forceIncorrect) {
+            try {
+                contextSnapshot = repository.fetchContext(message.id());
+                if (contextSnapshot == null) {
+                    contextSnapshot = new MessageRepository.MessageContext(null, null);
+                }
+            } catch (SQLException ex) {
+                contextSnapshot = new MessageRepository.MessageContext(null, null);
+            }
+        }
+
         GuessResponse response = new GuessResponse(
             correct,
             message.displayName(),
@@ -134,7 +146,8 @@ public final class GameEngine {
             change.basePoints(),
             change.streakMultiplier(),
             elapsedSeconds,
-            change.snapshot()
+            change.snapshot(),
+            contextSnapshot
         );
 
         return GuessEvaluationResult.success(response);
@@ -149,29 +162,33 @@ public final class GameEngine {
         MessageRepository.Message message = state.message();
         MessageRepository.MessageContext contextData;
         boolean unlocked;
+        long storedCost;
 
         synchronized (state) {
             unlocked = state.isContextUnlocked();
             contextData = state.context().orElse(null);
+            storedCost = state.contextCost();
         }
 
         if (unlocked && contextData != null) {
-            return ContextUnlockResult.success(new ContextResponse(contextCost, contextData, stats.snapshot()));
+            return ContextUnlockResult.success(new ContextResponse(storedCost, contextData, stats.snapshot()));
         }
 
         if (unlocked) {
             try {
                 MessageRepository.MessageContext fetched = repository.fetchContext(message.id());
                 synchronized (state) {
-                    state.unlockContext(fetched);
+                    state.unlockContext(fetched, storedCost);
                 }
-                return ContextUnlockResult.success(new ContextResponse(contextCost, fetched, stats.snapshot()));
+                return ContextUnlockResult.success(new ContextResponse(storedCost, fetched, stats.snapshot()));
             } catch (SQLException ex) {
                 return ContextUnlockResult.error();
             }
         }
 
-        GameSnapshot snapshotAfterSpend = stats.spendPoints(contextCost);
+        long currentPoints = stats.snapshot().totalPoints();
+        long dynamicCost = calculateContextCost(currentPoints);
+        GameSnapshot snapshotAfterSpend = stats.spendPoints(dynamicCost);
         if (snapshotAfterSpend == null) {
             return ContextUnlockResult.insufficientFunds();
         }
@@ -182,11 +199,11 @@ public final class GameEngine {
                 fetched = new MessageRepository.MessageContext(null, null);
             }
             synchronized (state) {
-                state.unlockContext(fetched);
+                state.unlockContext(fetched, dynamicCost);
             }
-            return ContextUnlockResult.success(new ContextResponse(contextCost, fetched, snapshotAfterSpend));
+            return ContextUnlockResult.success(new ContextResponse(dynamicCost, fetched, snapshotAfterSpend));
         } catch (SQLException ex) {
-            stats.refundPoints(contextCost);
+            stats.refundPoints(dynamicCost);
             return ContextUnlockResult.error();
         }
     }
@@ -212,8 +229,8 @@ public final class GameEngine {
         return streakBonusStep;
     }
 
-    public long contextCost() {
-        return contextCost;
+    public double contextCostPercentage() {
+        return contextCostPercentage;
     }
 
     public GameStats stats() {
@@ -222,6 +239,20 @@ public final class GameEngine {
 
     public MessageRepository repository() {
         return repository;
+    }
+
+    private long calculateContextCost(long totalPoints) {
+        if (totalPoints <= 0) {
+            return 0;
+        }
+        long cost = (long) Math.ceil(totalPoints * contextCostPercentage);
+        if (cost <= 0) {
+            cost = 1;
+        }
+        if (cost > totalPoints) {
+            cost = totalPoints;
+        }
+        return cost;
     }
 
     public record QuestionResponse(String questionId, MessageRepository.Message message, GameSnapshot score) {}
@@ -235,7 +266,8 @@ public final class GameEngine {
         double basePoints,
         double streakMultiplier,
         double elapsedSeconds,
-        GameSnapshot score
+        GameSnapshot score,
+        MessageRepository.MessageContext context
     ) {}
 
     public record GuessEvaluationResult(GuessStatus status, GuessResponse response) {

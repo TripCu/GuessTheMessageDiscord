@@ -26,7 +26,7 @@ Self-hosted web app that turns a Discord chat export into a competitive guessing
 - Multiplayer rooms with 10-character IDs and optional friendly names.
 - Smart SQLite importer that filters bots, renders attachments, and handles Discord embeds.
 - Multiple-choice guessing with anti-repeat decks, streak multipliers, and time-based point decay.
-- Optional paid context reveals adjacent messages; incorrect answers halve your score.
+- Optional paid context (10% of your current points) reveals adjacent messages and is also shown automatically after you answer; incorrect guesses still halve your score.
 - Responsive HTML/CSS/JS front end served by a pure Java 21 backend using `HttpServer`.
 - Single-command launch scripts for macOS/Linux (`build_and_run.sh`) and Windows (`build_and_run.ps1`).
 
@@ -96,7 +96,7 @@ Before you start, install or gather the following:
    - Base 1,000 points per question.
    - 25-point decay each second until you answer.
    - Streak multiplier: +20% per consecutive correct answer.
-   - Buying context costs 200 points and reveals the previous and next messages.
+   - Buying context costs 10% of your current points (rounded up) and reveals the previous and next messages. Context is also displayed automatically once you answer.
    - Wrong answers halve your total points and reset the streak.
 4. **Skipping counts as incorrect** — using “Show Another Message” without answering applies the same penalty as a wrong guess.
 5. **Leaderboards** update every 15 seconds and display total points, streak, and best streak.

@@ -27,7 +27,7 @@ public final class RoomManager {
     private final double basePoints;
     private final double decayPerSecond;
     private final double streakBonusStep;
-    private final long contextCost;
+    private final double contextCostPercentage;
     private final Duration questionExpiry;
     private final ConcurrentHashMap<String, Room> rooms = new ConcurrentHashMap<>();
 
@@ -36,14 +36,14 @@ public final class RoomManager {
         double basePoints,
         double decayPerSecond,
         double streakBonusStep,
-        long contextCost,
+        double contextCostPercentage,
         Duration questionExpiry
     ) throws IOException {
         this.storageDir = storageDir;
         this.basePoints = basePoints;
         this.decayPerSecond = decayPerSecond;
         this.streakBonusStep = streakBonusStep;
-        this.contextCost = contextCost;
+        this.contextCostPercentage = contextCostPercentage;
         this.questionExpiry = questionExpiry;
         Files.createDirectories(storageDir);
     }
@@ -102,7 +102,7 @@ public final class RoomManager {
             basePoints,
             decayPerSecond,
             streakBonusStep,
-            contextCost,
+            contextCostPercentage,
             questionExpiry
         );
         rooms.put(room.id(), room);
