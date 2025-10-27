@@ -7,7 +7,8 @@
 
 [CmdletBinding()]
 param(
-    [string] $Db,
+    [Alias('Database','DbPath')]
+    [string] $DiscordDb,
     [string] $RoomName,
     [int]    $Port = 8080,
     [switch] $Help
@@ -16,14 +17,14 @@ param(
 if ($Help) {
     Write-Host @"
 Usage:
-  ./build_and_run.ps1 [-Db PATH] [-RoomName NAME] [-Port PORT]
+  ./build_and_run.ps1 [-DiscordDb PATH] [-RoomName NAME] [-Port PORT]
 
 Examples:
   ./build_and_run.ps1
-  ./build_and_run.ps1 -Db C:\exports\discord_messages.db -RoomName "Friday Night" -Port 8080
+  ./build_and_run.ps1 -DiscordDb C:\exports\discord_messages.db -RoomName "Friday Night" -Port 8080
 
 Flags:
-  -Db         Path to a Discord SQLite export (optional).
+  -DiscordDb         Path to a Discord SQLite export (optional).
   -RoomName   Friendly display name for the seeded room (optional).
   -Port       HTTP port (default: 8080).
   -Help       Show this information.
@@ -53,7 +54,7 @@ $WebRoot  = Join-Path $ScriptDir 'public'
 
 New-Item -ItemType Directory -Path $RoomsDir -Force | Out-Null
 
-$dbPath = Resolve-OptionalPath -PathValue $Db
+$dbPath = Resolve-OptionalPath -PathValue $DiscordDb
 
 function Ensure-Java {
     if (-not (Get-Command java -ErrorAction SilentlyContinue)) {

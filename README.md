@@ -59,7 +59,7 @@ If Maven is not already installed, the script downloads Apache Maven `3.9.6` int
 ### Windows Quick Start (PowerShell)
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   # Run once to allow local scripts
-./build_and_run.ps1 -Db "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
+./build_and_run.ps1 -DiscordDb "C:\exports\discord_messages.db" -RoomName "Friday Night" -Port 8080
 ```
 Run the script from a PowerShell terminal opened in the repository root. It validates Java, installs Maven `3.9.6` locally under `.maven\` if needed, stops any existing server on the selected port, builds the shaded JAR, and launches it. All parameters are optional; omit `-Db` to start without a seeded room.
 
